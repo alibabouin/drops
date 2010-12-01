@@ -341,7 +341,7 @@ void update_game(){
     int max_active_drops_count = 10, drops_to_activate, active_drops_count = 0;
     int max_active_enemies_count = 50, active_enemies_count = 0;
 
-    // let the game.drops grow or die
+    // let the drops grow or die
     for (i = 0; i < 50; i++){
         if (game.drops[i].state == DROP_GROWING){
             game.drops[i].size++;
@@ -358,7 +358,7 @@ void update_game(){
         }
     }
 
-    // Add game.drops if maximum not reached
+    // Add drops if maximum not reached
     for (i = 0; i < 50; i++){
         active_drops_count += game.drops[i].state != DROP_INACTIVE;
     }
@@ -385,10 +385,10 @@ void update_game(){
         }
     }
 
-    // Do we need to interact with game.enemies ?
+    // Do we need to interact with enemies ?
     for (i = 0; i < 50; i++){
         if (game.enemies[i].state){
-            // We get hurt if we collide with game.enemies..
+            // We get hurt if we collide with enemies..
             if (collide(game.player.x, game.player.y, game.player.size, game.enemies[i].x, game.enemies[i].y, 2)){
                 game.player.last_hurt = SDL_GetTicks();
                 game.player.life--;
