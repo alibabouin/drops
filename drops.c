@@ -39,34 +39,34 @@ PSP_HEAP_SIZE_MAX();
 
 #ifdef _PSP_FW_VERSION
 enum {
-	PSP_BUTTON_CROSS,
-	PSP_BUTTON_TRIANGLE,
-	PSP_BUTTON_SQUARE,
-	PSP_BUTTON_CIRCLE,
-	PSP_BUTTON_L,
-	PSP_BUTTON_R,
-	PSP_BUTTON_DOWN,
-	PSP_BUTTON_LEFT,
-	PSP_BUTTON_UP,
-	PSP_BUTTON_RIGHT,
-	PSP_BUTTON_SELECT,
-	PSP_BUTTON_START,
+    PSP_BUTTON_CROSS,
+    PSP_BUTTON_TRIANGLE,
+    PSP_BUTTON_SQUARE,
+    PSP_BUTTON_CIRCLE,
+    PSP_BUTTON_L,
+    PSP_BUTTON_R,
+    PSP_BUTTON_DOWN,
+    PSP_BUTTON_LEFT,
+    PSP_BUTTON_UP,
+    PSP_BUTTON_RIGHT,
+    PSP_BUTTON_SELECT,
+    PSP_BUTTON_START,
 };
 #else
 // Only valid for my joypad
 enum {
-	PSP_BUTTON_CROSS = 2,
-	PSP_BUTTON_CIRCLE = 1,
-	PSP_BUTTON_SQUARE = 3,
-	PSP_BUTTON_TRIANGLE = 0,
-	PSP_BUTTON_L = 6,
-	PSP_BUTTON_R = 7,
-	PSP_BUTTON_DOWN,
-	PSP_BUTTON_LEFT,
-	PSP_BUTTON_UP,
-	PSP_BUTTON_RIGHT,
-	PSP_BUTTON_SELECT = 8,
-	PSP_BUTTON_START = 11
+    PSP_BUTTON_CROSS = 2,
+    PSP_BUTTON_CIRCLE = 1,
+    PSP_BUTTON_SQUARE = 3,
+    PSP_BUTTON_TRIANGLE = 0,
+    PSP_BUTTON_L = 6,
+    PSP_BUTTON_R = 7,
+    PSP_BUTTON_DOWN,
+    PSP_BUTTON_LEFT,
+    PSP_BUTTON_UP,
+    PSP_BUTTON_RIGHT,
+    PSP_BUTTON_SELECT = 8,
+    PSP_BUTTON_START = 11
 };
 #endif
 
@@ -157,45 +157,45 @@ void update_joy_state(){
     memset(joystick_state->buttons, 0, sizeof(joystick_state->buttons));
     joystick_state->analog_x = joystick_state->analog_y = 0;
 
-	SDL_JoystickUpdate();
+    SDL_JoystickUpdate();
 
-	joystick_state->buttons[PSP_BUTTON_TRIANGLE] = SDL_JoystickGetButton(joystick, 0);
-	joystick_state->buttons[PSP_BUTTON_CIRCLE] = SDL_JoystickGetButton(joystick, 1);
-	joystick_state->buttons[PSP_BUTTON_CROSS] = SDL_JoystickGetButton(joystick, 2);
-	joystick_state->buttons[PSP_BUTTON_SQUARE] = SDL_JoystickGetButton(joystick, 3);
+    joystick_state->buttons[PSP_BUTTON_TRIANGLE] = SDL_JoystickGetButton(joystick, 0);
+    joystick_state->buttons[PSP_BUTTON_CIRCLE] = SDL_JoystickGetButton(joystick, 1);
+    joystick_state->buttons[PSP_BUTTON_CROSS] = SDL_JoystickGetButton(joystick, 2);
+    joystick_state->buttons[PSP_BUTTON_SQUARE] = SDL_JoystickGetButton(joystick, 3);
 
-	joystick_state->buttons[PSP_BUTTON_L] = SDL_JoystickGetButton(joystick, 4);
-	joystick_state->buttons[PSP_BUTTON_R] = SDL_JoystickGetButton(joystick, 5);
+    joystick_state->buttons[PSP_BUTTON_L] = SDL_JoystickGetButton(joystick, 4);
+    joystick_state->buttons[PSP_BUTTON_R] = SDL_JoystickGetButton(joystick, 5);
 
-	joystick_state->buttons[PSP_BUTTON_START] = SDL_JoystickGetButton(joystick, 11);
+    joystick_state->buttons[PSP_BUTTON_START] = SDL_JoystickGetButton(joystick, 11);
 
 #ifdef _PSP_FW_VERSION
-	joystick_state->buttons[PSP_BUTTON_DOWN] = SDL_JoystickGetButton(joystick, 6)
-	joystick_state->buttons[PSP_BUTTON_LEFT] = SDL_JoystickGetButton(joystick, 7)
-	joystick_state->buttons[PSP_BUTTON_UP] = SDL_JoystickGetButton(joystick, 8)
-	joystick_state->buttons[PSP_BUTTON_RIGHT] = SDL_JoystickGetButton(joystick, 9)
+    joystick_state->buttons[PSP_BUTTON_DOWN] = SDL_JoystickGetButton(joystick, 6)
+    joystick_state->buttons[PSP_BUTTON_LEFT] = SDL_JoystickGetButton(joystick, 7)
+    joystick_state->buttons[PSP_BUTTON_UP] = SDL_JoystickGetButton(joystick, 8)
+    joystick_state->buttons[PSP_BUTTON_RIGHT] = SDL_JoystickGetButton(joystick, 9)
 
-	joystick_state->buttons[PSP_BUTTON_SELECT] = SDL_JoystickGetButton(joystick, 10);
+    joystick_state->buttons[PSP_BUTTON_SELECT] = SDL_JoystickGetButton(joystick, 10);
 #else
-	joystick_state->buttons[PSP_BUTTON_L] = SDL_JoystickGetButton(joystick, 6);
-	joystick_state->buttons[PSP_BUTTON_R] = SDL_JoystickGetButton(joystick, 7);
+    joystick_state->buttons[PSP_BUTTON_L] = SDL_JoystickGetButton(joystick, 6);
+    joystick_state->buttons[PSP_BUTTON_R] = SDL_JoystickGetButton(joystick, 7);
 
-	joystick_state->buttons[PSP_BUTTON_SELECT] = SDL_JoystickGetButton(joystick, 8);
+    joystick_state->buttons[PSP_BUTTON_SELECT] = SDL_JoystickGetButton(joystick, 8);
 #endif
-	joystick_state->analog_x = (SDL_JoystickGetAxis(joystick, 0) / 256) + 128;
-	joystick_state->analog_y = (SDL_JoystickGetAxis(joystick, 1) / 256) + 128;
+    joystick_state->analog_x = (SDL_JoystickGetAxis(joystick, 0) / 256) + 128;
+    joystick_state->analog_y = (SDL_JoystickGetAxis(joystick, 1) / 256) + 128;
 }
 
 void print(SDL_Surface *dst, int x, int y, TTF_Font *font, char *text, int r, int g, int b){
-	SDL_Rect pos;
-	SDL_Surface *src;
-	SDL_Color color = {r, g, b};
-	if (font == NULL) return;
-	pos.x = x;
-	pos.y = y;
-	src = TTF_RenderText_Blended(font, text, color);
-	SDL_BlitSurface(src, NULL, dst, &pos);
-	SDL_FreeSurface(src);
+    SDL_Rect pos;
+    SDL_Surface *src;
+    SDL_Color color = {r, g, b};
+    if (font == NULL) return;
+    pos.x = x;
+    pos.y = y;
+    src = TTF_RenderText_Blended(font, text, color);
+    SDL_BlitSurface(src, NULL, dst, &pos);
+    SDL_FreeSurface(src);
 }
 
 void print_center(SDL_Surface *dst, TTF_Font *font, char *text, int r, int g, int b){
@@ -230,35 +230,35 @@ void quit(){
     boxRGBA(hardware.screen, 0, 0, WIDTH, HEIGHT, 0, 0, 0, 200);
     print_center(hardware.screen, hardware.big_font, "Shutting down...", 255, 255, 255);
     SDL_Flip(hardware.screen);
-	SDL_Quit();
+    SDL_Quit();
 #ifdef _PSP_FW_VERSION
-	sceKernelExitGame();
+    sceKernelExitGame();
 #else
     exit(0);
 #endif
 }
 
 void init(){
-	int flags;
+    int flags;
 
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO) == -1)
-		quit();
-	hardware.joystick = SDL_JoystickOpen(0);
-	SDL_JoystickEventState(SDL_ENABLE);
-	if (TTF_Init() == -1)
-		quit();
-	if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) < 0)
-		quit();
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO) == -1)
+        quit();
+    hardware.joystick = SDL_JoystickOpen(0);
+    SDL_JoystickEventState(SDL_ENABLE);
+    if (TTF_Init() == -1)
+        quit();
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) < 0)
+        quit();
 
-	SDL_ShowCursor(SDL_DISABLE);
+    SDL_ShowCursor(SDL_DISABLE);
 
-	flags = SDL_HWSURFACE | SDL_ANYFORMAT | SDL_DOUBLEBUF;
-	hardware.screen = SDL_SetVideoMode(WIDTH, HEIGHT, BPP, flags);
-	if (hardware.screen == NULL)
-		quit();
+    flags = SDL_HWSURFACE | SDL_ANYFORMAT | SDL_DOUBLEBUF;
+    hardware.screen = SDL_SetVideoMode(WIDTH, HEIGHT, BPP, flags);
+    if (hardware.screen == NULL)
+        quit();
 
-	hardware.big_font = TTF_OpenFont("DroidSans.ttf", 20);
-	hardware.medium_font = TTF_OpenFont("DroidSans.ttf", 12);
+    hardware.big_font = TTF_OpenFont("DroidSans.ttf", 20);
+    hardware.medium_font = TTF_OpenFont("DroidSans.ttf", 12);
 
     reset_game();
 }
@@ -319,7 +319,7 @@ void render_world(){
 void display(){
     switch (game.state){
     case NO_GAME:
-    	SDL_FillRect(hardware.screen, NULL, BLACK);
+        SDL_FillRect(hardware.screen, NULL, BLACK);
         print_center(hardware.screen, hardware.big_font, "Press START to play", 255, 255, 255);
         break;
     case GAME_PAUSED:
@@ -475,13 +475,13 @@ void update_game(){
 }
 
 void loop(){
-	SDL_Event event;
-	FPSmanager fps_manager;
+    SDL_Event event;
+    FPSmanager fps_manager;
 
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 60);
 
-	while (1){
+    while (1){
         int up_event = 0;
         display();
         if (SDL_PollEvent(&event)){
@@ -519,31 +519,31 @@ void loop(){
             break;
         }
         SDL_framerateDelay(&fps_manager);
-	}
+    }
 }
 
 #ifdef _PSP_FW_VERSION
 int exit_callback(int arg1, int arg2, void *common){
-	quit();
-	return 0;
+    quit();
+    return 0;
 }
 
 int CallbackThread(SceSize args, void *argp){
-	int cbid;
-	cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL);
-	sceKernelRegisterExitCallback(cbid);
-	sceKernelSleepThreadCB();
-	return 0;
+    int cbid;
+    cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL);
+    sceKernelRegisterExitCallback(cbid);
+    sceKernelSleepThreadCB();
+    return 0;
 }
 
 int SetupCallbacks(void){
-	int thid = 0;
-	thid = sceKernelCreateThread("update_thread", CallbackThread, 0x11, 0xFA0, PSP_THREAD_ATTR_USER, 0);
+    int thid = 0;
+    thid = sceKernelCreateThread("update_thread", CallbackThread, 0x11, 0xFA0, PSP_THREAD_ATTR_USER, 0);
 
-	if (thid >= 0)
-		sceKernelStartThread(thid, 0, 0);
+    if (thid >= 0)
+        sceKernelStartThread(thid, 0, 0);
 
-	return thid;
+    return thid;
 }
 
 #define BUF_WIDTH (512)
@@ -554,39 +554,39 @@ static unsigned int __attribute__((aligned(16))) list[262144];
 
 static void SetupGu()
 {
-	sceGuInit();
+    sceGuInit();
 
-	sceGuStart(GU_DIRECT, list);
-	sceGuDrawBuffer(GU_PSM_8888, (void*)0, BUF_WIDTH);
-	sceGuDispBuffer(SCR_WIDTH, SCR_HEIGHT, (void*)0x88000, BUF_WIDTH);
-	sceGuDepthBuffer((void*)0x110000, BUF_WIDTH);
-	sceGuOffset(2048 - (SCR_WIDTH/2), 2048 - (SCR_HEIGHT/2));
-	sceGuViewport(2048, 2048, SCR_WIDTH, SCR_HEIGHT);
-	sceGuDepthRange(0xc350, 0x2710);
-	sceGuScissor(0, 0, SCR_WIDTH, SCR_HEIGHT);
-	sceGuEnable(GU_SCISSOR_TEST);
-	sceGuDepthFunc(GU_GEQUAL);
-	sceGuEnable(GU_DEPTH_TEST);
-	sceGuFrontFace(GU_CW);
-	sceGuShadeModel(GU_SMOOTH);
-	sceGuEnable(GU_CULL_FACE);
-	sceGuEnable(GU_CLIP_PLANES);
-	sceGuFinish();
-	sceGuSync(0, 0);
+    sceGuStart(GU_DIRECT, list);
+    sceGuDrawBuffer(GU_PSM_8888, (void*)0, BUF_WIDTH);
+    sceGuDispBuffer(SCR_WIDTH, SCR_HEIGHT, (void*)0x88000, BUF_WIDTH);
+    sceGuDepthBuffer((void*)0x110000, BUF_WIDTH);
+    sceGuOffset(2048 - (SCR_WIDTH/2), 2048 - (SCR_HEIGHT/2));
+    sceGuViewport(2048, 2048, SCR_WIDTH, SCR_HEIGHT);
+    sceGuDepthRange(0xc350, 0x2710);
+    sceGuScissor(0, 0, SCR_WIDTH, SCR_HEIGHT);
+    sceGuEnable(GU_SCISSOR_TEST);
+    sceGuDepthFunc(GU_GEQUAL);
+    sceGuEnable(GU_DEPTH_TEST);
+    sceGuFrontFace(GU_CW);
+    sceGuShadeModel(GU_SMOOTH);
+    sceGuEnable(GU_CULL_FACE);
+    sceGuEnable(GU_CLIP_PLANES);
+    sceGuFinish();
+    sceGuSync(0, 0);
 
-	sceDisplayWaitVblankStart();
-	sceGuDisplay(GU_TRUE);
+    sceDisplayWaitVblankStart();
+    sceGuDisplay(GU_TRUE);
 }
 #endif
 
 int main(int argc, char *argv[])
 {
 #ifdef _PSP_FW_VERSION
-	SetupCallbacks();
-	SetupGu();
+    SetupCallbacks();
+    SetupGu();
 #endif
-	init();
-	loop();
-	return 0;
+    init();
+    loop();
+    return 0;
 }
 
