@@ -239,8 +239,6 @@ void quit(){
 }
 
 void init(){
-    int flags;
-
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO) == -1)
         quit();
     hardware.joystick = SDL_JoystickOpen(0);
@@ -252,8 +250,7 @@ void init(){
 
     SDL_ShowCursor(SDL_DISABLE);
 
-    flags = SDL_HWSURFACE | SDL_ANYFORMAT | SDL_DOUBLEBUF;
-    hardware.screen = SDL_SetVideoMode(WIDTH, HEIGHT, BPP, flags);
+    hardware.screen = SDL_SetVideoMode(WIDTH, HEIGHT, BPP, SDL_HWSURFACE | SDL_ANYFORMAT | SDL_DOUBLEBUF);
     if (hardware.screen == NULL)
         quit();
 
