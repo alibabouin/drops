@@ -28,7 +28,7 @@ PSP_HEAP_SIZE_MAX();
 #define WIDTH 480
 #define HEIGHT 272
 #define BPP 32
-#define BLACK 0x0
+#define BLACK 0x000000ff
 #define WHITE 0xffffffff
 
 #define TINT_COLOR 0x000000aa
