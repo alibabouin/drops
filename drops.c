@@ -565,10 +565,11 @@ void loop(){
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 60);
 
+    display();
+
     while (1){
         SDL_Event event;
         int up_event;
-        display();
         up_event = 0;
         if (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT){
@@ -589,6 +590,7 @@ void loop(){
             if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS)){
                 game.state = GAME_PLAYING;
                 start_clock();
+                display();
             }
             break;
         case GAME_PLAYING:
@@ -597,16 +599,19 @@ void loop(){
                 stop_clock();
             }
             update_game();
+            display();
             break;
         case GAME_PAUSED:
             if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS)){
                 game.state = GAME_PLAYING;
                 start_clock();
+                display();
             }
             break;
         case GAME_OVER:
             if (up_event && (event.jbutton.button == PSP_BUTTON_START)){
-               reset_game();
+                reset_game();
+                display();
             }
             break;
         }
