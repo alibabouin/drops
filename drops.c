@@ -142,6 +142,7 @@ typedef struct Game {
     Enemy enemies[50];
     Player player;
     Uint32 last_enemy_timestamp;
+    Uint32 ticks, last_start;
 } Game;
 
 Game game;
@@ -173,6 +174,24 @@ void apply_fx(FX fx, void *params){
         SDL_BlitSurface(maxi, NULL, hardware.screen, NULL);
         SDL_FreeSurface(maxi);
         break;
+    }
+}
+
+void stop_clock(){
+    game.ticks += SDL_GetTicks() - game.last_start;
+    game.last_start = 0;
+}
+
+void start_clock(){
+    game.last_start = SDL_GetTicks();
+}
+
+Uint32 get_clock(){
+    if (game.state == GAME_PLAYING){
+        return game.ticks + SDL_GetTicks() - game.last_start;
+    }
+    else {
+        return game.ticks;
     }
 }
 
@@ -249,6 +268,8 @@ void reset_game(){
     }
     game.state = NO_GAME;
     game.last_enemy_timestamp = 0;
+    game.ticks = 0;
+    game.last_start = 0;
 }
 
 void quit(){
@@ -283,6 +304,14 @@ void init(){
     hardware.medium_font = TTF_OpenFont("DroidSans.ttf", 12);
 
     reset_game();
+}
+
+void draw_clock(){
+    int width, height;
+    char msg[256];
+    snprintf(msg, 256, "%d", get_clock());
+    TTF_SizeText(hardware.big_font, msg, &width, &height);
+    print(hardware.screen, 10, 10, hardware.medium_font, msg, 255, 255, 255);
 }
 
 void render_world(){
@@ -321,31 +350,13 @@ void render_world(){
     else if (game.player.force_field)
         filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size + game.player.force_field, FORCE_FIELD_COLOR);
 
-    if (game.player.last_hurt && (SDL_GetTicks() - game.player.last_hurt < 1000)){
+    if (game.player.last_hurt && (get_clock() - game.player.last_hurt < 1000)){
         filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, WHITE);
         aacircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, WHITE);
     }
     else {
         filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, PLAYER_COLOR);
         aacircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, PLAYER_COLOR);
-    }
-
-/*
-    if (game.player.using_turbo){
-        strcpy(msg, "TURBO");
-        TTF_SizeText(hardware.medium_font, msg, &width, &height);
-        print(hardware.screen, 10, 10, hardware.medium_font, msg, 255, 255, 255);
-    }
-*/
-    if (game.player.berzerk){
-        strcpy(msg, "--BERZERK--");
-        TTF_SizeText(hardware.medium_font, msg, &width, &height);
-        print(hardware.screen, 10, 10, hardware.medium_font, msg, 255, 255, 255);
-    }
-    else {
-        snprintf(msg, 256, "POW %d", game.player.energy_left);
-        TTF_SizeText(hardware.medium_font, msg, &width, &height);
-        print(hardware.screen, 10, 10, hardware.medium_font, msg, 255, 255, 255);
     }
 
     snprintf(msg, 256, "%d", game.player.life);
@@ -396,12 +407,12 @@ void update_game(){
 
     if (game.player.energy_left > 500 && hardware.joystick_state.buttons[PSP_BUTTON_TRIANGLE] && !game.player.berzerk){
         game.player.energy_left = 0;
-        game.player.berzerk = SDL_GetTicks();
+        game.player.berzerk = get_clock();
         game.player.berzerk_field = 0;
         return;
     }
 
-    berzerk_duration = SDL_GetTicks() - game.player.berzerk;
+    berzerk_duration = get_clock() - game.player.berzerk;
     game.player.berzerk_field = berzerk_duration / 4;
     if (berzerk_duration > 1500){
         game.player.berzerk = 0;
@@ -456,11 +467,12 @@ void update_game(){
         if (game.enemies[i].state){
             // We get hurt if we collide with enemies..
             if (collide(game.player.x, game.player.y, game.player.size, game.enemies[i].x, game.enemies[i].y, 2)){
-                game.player.last_hurt = SDL_GetTicks();
+                game.player.last_hurt = get_clock();
                 game.player.life--;
                 game.enemies[i].state = ENEMY_INACTIVE;
                 if (game.player.life == 0){
                     game.state = GAME_OVER;
+                    stop_clock();
                     return;
                 }
             }
@@ -496,13 +508,13 @@ void update_game(){
         for (i = 0; i < 50; i++){
             active_enemies_count += game.enemies[i].state != ENEMY_INACTIVE;
         }
-        if ((SDL_GetTicks() - game.last_enemy_timestamp > 500) && active_enemies_count < max_active_enemies_count){
+        if ((get_clock() - game.last_enemy_timestamp > 500) && active_enemies_count < max_active_enemies_count){
             for (i = 0; i < 50; i++){
                 if (game.enemies[i].state == ENEMY_INACTIVE){
                     game.enemies[i].state = ENEMY_ACTIVE;
                     game.enemies[i].x = random() % 2 ? 10 : WIDTH - 10;
                     game.enemies[i].y = random() % 2 ? 10 : HEIGHT - 10;
-                    game.last_enemy_timestamp = SDL_GetTicks();
+                    game.last_enemy_timestamp = get_clock();
                     break;
                 }
             }
@@ -548,15 +560,16 @@ void update_game(){
 }
 
 void loop(){
-    SDL_Event event;
     FPSmanager fps_manager;
 
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 60);
 
     while (1){
-        int up_event = 0;
+        SDL_Event event;
+        int up_event;
         display();
+        up_event = 0;
         if (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT){
                 quit();
@@ -573,17 +586,23 @@ void loop(){
 
         switch (game.state){
         case NO_GAME:
-            if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS))
-               game.state = GAME_PLAYING;
+            if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS)){
+                game.state = GAME_PLAYING;
+                start_clock();
+            }
             break;
         case GAME_PLAYING:
-            if (up_event && event.jbutton.button == PSP_BUTTON_START)
-               game.state = GAME_PAUSED;
+            if (up_event && event.jbutton.button == PSP_BUTTON_START){
+                game.state = GAME_PAUSED;
+                stop_clock();
+            }
             update_game();
             break;
         case GAME_PAUSED:
-            if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS))
-               game.state = GAME_PLAYING;
+            if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS)){
+                game.state = GAME_PLAYING;
+                start_clock();
+            }
             break;
         case GAME_OVER:
             if (up_event && (event.jbutton.button == PSP_BUTTON_START)){
