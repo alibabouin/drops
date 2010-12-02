@@ -626,7 +626,9 @@ void loop(){
                 game.state = GAME_PAUSED;
                 stop_clock();
             }
-            update_game();
+            else {
+                update_game();
+            }
             redraw();
             break;
         case GAME_PAUSED:
