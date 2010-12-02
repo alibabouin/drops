@@ -214,10 +214,10 @@ void update_joy_state(){
     joystick_state->buttons[PSP_BUTTON_START] = SDL_JoystickGetButton(joystick, 11);
 
 #ifdef _PSP_FW_VERSION
-    joystick_state->buttons[PSP_BUTTON_DOWN] = SDL_JoystickGetButton(joystick, 6)
-    joystick_state->buttons[PSP_BUTTON_LEFT] = SDL_JoystickGetButton(joystick, 7)
-    joystick_state->buttons[PSP_BUTTON_UP] = SDL_JoystickGetButton(joystick, 8)
-    joystick_state->buttons[PSP_BUTTON_RIGHT] = SDL_JoystickGetButton(joystick, 9)
+    joystick_state->buttons[PSP_BUTTON_DOWN] = SDL_JoystickGetButton(joystick, 6);
+    joystick_state->buttons[PSP_BUTTON_LEFT] = SDL_JoystickGetButton(joystick, 7);
+    joystick_state->buttons[PSP_BUTTON_UP] = SDL_JoystickGetButton(joystick, 8);
+    joystick_state->buttons[PSP_BUTTON_RIGHT] = SDL_JoystickGetButton(joystick, 9);
 
     joystick_state->buttons[PSP_BUTTON_SELECT] = SDL_JoystickGetButton(joystick, 10);
 #else
@@ -641,6 +641,8 @@ int SetupCallbacks(void){
 #define BUF_WIDTH (512)
 #define PIXEL_SIZE (4)
 #define FRAME_SIZE (BUF_WIDTH * HEIGHT * PIXEL_SIZE)
+#define SCR_WIDTH WIDTH
+#define SCR_HEIGHT HEIGHT
 
 static unsigned int __attribute__((aligned(16))) list[262144];
 
