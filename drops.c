@@ -34,6 +34,8 @@ PSP_HEAP_SIZE_MAX();
 #define TINT_COLOR 0x000000aa
 #define BG_COLOR 0x555544ff
 #define PLAYER_COLOR 0xffbbbbff
+#define PLAYER_FORCE_COLOR 0xff8e80ff
+#define PLAYER_TURBO_COLOR 0xffe273ff
 #define FORCE_FIELD_COLOR 0xffffff80
 
 #ifdef _PSP_FW_VERSION
@@ -87,7 +89,7 @@ typedef struct Player {
     int x, y;
     int size;
     int life;
-    int using_turbo;
+    int turbo;
     int speed;
     int force_field;
     int energy;
@@ -255,7 +257,7 @@ void reset_game(){
     game.player.life = 5;
     game.player.size = 10;
     game.player.speed = 2;
-    game.player.using_turbo = 0;
+    game.player.turbo = 0;
     game.player.energy = 0;
     game.player.force_field = 0;
     game.player.points = 0;
@@ -317,10 +319,10 @@ void draw_clock(){
 void render_world(){
     char msg[256];
     int width, height, i;
+    Uint32 color = 0;
 
     SDL_FillRect(hardware.screen, NULL, SDL_MapRGB(hardware.screen->format, 0x55, 0x55, 0x44));
     for (i = 0; i < 50; i++){
-        Uint32 color = 0;
         if (game.drops[i].state){
             switch (game.drops[i].state){
                 case DROP_ACTIVE: color = 0x019875ff; break;
@@ -351,13 +353,19 @@ void render_world(){
         filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size + game.player.force_field, FORCE_FIELD_COLOR);
 
     if (game.player.hit && (get_clock() - game.player.hit < 1000)){
-        filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, WHITE);
-        aacircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, WHITE);
+        color = WHITE;
+    }
+    else if (game.player.force_field){
+        color = PLAYER_FORCE_COLOR;
+    }
+    else if (game.player.turbo){
+        color = PLAYER_TURBO_COLOR;
     }
     else {
-        filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, PLAYER_COLOR);
-        aacircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, PLAYER_COLOR);
+        color = PLAYER_COLOR;
     }
+    filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, color);
+    aacircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, color);
 
     snprintf(msg, 256, "%d", game.player.life);
     TTF_SizeText(hardware.big_font, msg, &width, &height);
@@ -523,12 +531,12 @@ void update_game(){
 
     // Use turbo ?
     game.player.speed = 2;
-    game.player.using_turbo = 0;
+    game.player.turbo = 0;
     if (game.player.berzerk || hardware.joystick_state.buttons[PSP_BUTTON_CIRCLE]){
         if (game.player.berzerk || game.player.energy >= 0){
             game.player.berzerk || --game.player.energy;
             game.player.speed = 4;
-            game.player.using_turbo = 1;
+            game.player.turbo = 1;
         }
     }
 
