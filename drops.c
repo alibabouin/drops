@@ -70,6 +70,10 @@ enum {
 };
 #endif
 
+typedef enum FX {
+    PIXELATE,
+} FX;
+
 typedef struct JoystickState {
     int buttons[12];
     int analog_x;
@@ -313,6 +317,19 @@ void render_world(){
     print(hardware.screen, WIDTH - width - 10, 10, hardware.big_font, msg, 255, 255, 255);
 }
 
+void apply_fx(FX fx, void *params){
+    SDL_Surface *mini, *maxi;
+    switch (fx){
+    case PIXELATE:
+        mini = zoomSurface(hardware.screen, 0.125, 0.125, 1);
+        maxi = zoomSurface(mini, 8, 8, 0);
+        SDL_FreeSurface(mini);
+        SDL_BlitSurface(maxi, NULL, hardware.screen, NULL);
+        SDL_FreeSurface(maxi);
+        break;
+    }
+}
+
 void display(){
     switch (game.state){
     case NO_GAME:
@@ -321,6 +338,7 @@ void display(){
         break;
     case GAME_PAUSED:
         render_world();
+        apply_fx(PIXELATE, NULL);
         boxRGBA(hardware.screen, 0, 0, WIDTH, HEIGHT, 0, 0, 0, 200);
         print_center(hardware.screen, hardware.big_font, "Paused", 255, 255, 255);
         break;
@@ -329,6 +347,7 @@ void display(){
         break;
     case GAME_OVER:
         render_world();
+        apply_fx(PIXELATE, NULL);
         boxRGBA(hardware.screen, 0, 0, WIDTH, HEIGHT, 0, 0, 0, 200);
         print_center(hardware.screen, hardware.big_font, "GAME OVER", 255, 255, 255);
         break;
