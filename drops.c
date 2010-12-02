@@ -129,6 +129,9 @@ typedef struct Hardware {
     SDL_Surface *screen;
     TTF_Font *big_font;
     TTF_Font *medium_font;
+    SDL_Surface *happy_face;
+    SDL_Surface *paused_face;
+    SDL_Surface *game_over_face;
 } Hardware;
 
 enum GameState {
@@ -244,10 +247,24 @@ void print(SDL_Surface *dst, int x, int y, TTF_Font *font, char *text, int r, in
     SDL_FreeSurface(src);
 }
 
+// Draw centered text
 void print_center(SDL_Surface *dst, TTF_Font *font, char *text, int r, int g, int b){
     int width, height;
     TTF_SizeText(font, text, &width, &height);
     print(hardware.screen, (WIDTH - width) / 2, (HEIGHT - height) / 2, font, text, r, g, b);
+}
+
+// Draw centered text with a logo
+void print_with_logo(SDL_Surface *dst, TTF_Font *font, char *text, SDL_Surface *logo){
+    SDL_Rect pos;
+    int width, height;
+
+    TTF_SizeText(font, text, &width, &height);
+    pos.x = (WIDTH - width) / 2 - 40;
+    pos.y = (HEIGHT - height) / 2 - (30 - height) / 2;
+    print(hardware.screen, (WIDTH - width) / 2, (HEIGHT - height) / 2, font, text, 255, 255, 255);
+    SDL_BlitSurface(logo, NULL, hardware.screen, &pos);
+    rectangleColor(hardware.screen, pos.x - 1, pos.y - 1, pos.x + 30, pos.y + 30, WHITE);
 }
 
 void reset_game(){
@@ -304,6 +321,10 @@ void init(){
         quit();
     hardware.big_font = TTF_OpenFont("DroidSans.ttf", 20);
     hardware.medium_font = TTF_OpenFont("DroidSans.ttf", 12);
+
+    hardware.game_over_face = IMG_Load("gameover.png");
+    hardware.happy_face = IMG_Load("happy.png");
+    hardware.paused_face = IMG_Load("paused.png");
 
     reset_game();
 }
@@ -379,20 +400,19 @@ void render_world(){
     print(hardware.screen, WIDTH - width - 10, 10, hardware.big_font, msg, 255, 255, 255);
 }
 
-
-void display(){
+void redraw(){
     switch (game.state){
     case NO_GAME:
         render_world();
         apply_fx(PIXELATE, NULL);
         boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
-        print_center(hardware.screen, hardware.big_font, "Press START to play", 255, 255, 255);
+        print_with_logo(hardware.screen, hardware.big_font, "Press START to play", hardware.happy_face);
         break;
     case GAME_PAUSED:
         render_world();
         apply_fx(PIXELATE, NULL);
         boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
-        print_center(hardware.screen, hardware.big_font, "Paused", 255, 255, 255);
+        print_with_logo(hardware.screen, hardware.big_font, "Paused", hardware.paused_face);
         break;
     case GAME_PLAYING:
         render_world();
@@ -401,7 +421,7 @@ void display(){
         render_world();
         apply_fx(PIXELATE, NULL);
         boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
-        print_center(hardware.screen, hardware.big_font, "GAME OVER", 255, 255, 255);
+        print_with_logo(hardware.screen, hardware.big_font, "I'M DEAD NOW, THANK YOU!", hardware.game_over_face);
         break;
     }
     SDL_Flip(hardware.screen);
@@ -573,7 +593,7 @@ void loop(){
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 60);
 
-    display();
+    redraw();
 
     while (1){
         SDL_Event event;
@@ -598,7 +618,7 @@ void loop(){
             if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS)){
                 game.state = GAME_PLAYING;
                 start_clock();
-                display();
+                redraw();
             }
             break;
         case GAME_PLAYING:
@@ -607,19 +627,19 @@ void loop(){
                 stop_clock();
             }
             update_game();
-            display();
+            redraw();
             break;
         case GAME_PAUSED:
             if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS)){
                 game.state = GAME_PLAYING;
                 start_clock();
-                display();
+                redraw();
             }
             break;
         case GAME_OVER:
             if (up_event && (event.jbutton.button == PSP_BUTTON_START)){
                 reset_game();
-                display();
+                redraw();
             }
             break;
         }
