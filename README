@@ -2,4 +2,17 @@ drops
 
 Fast paced tiny Game for Linux/PSP
 
+INSTALLATION
+
+You need libsdl-dev on Linux and the pspsdk for PSP (I suggest 'Minimalist PSPSDK' http://minpspw.sourceforge.net/index.html)
+
+ > # For Linux
+ > make
+ > ./drops
+
+ > # For PSP
+ > make -f Makefile.psp  # PSP
+ > mkdir /path/to/psp/game/drops
+ > cp DroidSans.ttf EBOOT.PBP /path/to/psp/game/drops
+
 Note: currently playable only on PSP or via joypad/joystick on Linux
