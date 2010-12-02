@@ -90,9 +90,9 @@ typedef struct Player {
     int using_turbo;
     int speed;
     int force_field;
-    int energy_left;
+    int energy;
     int points;
-    int last_hurt;
+    Uint32 hit;
     Uint32 berzerk;
     int berzerk_field;
 } Player;
@@ -256,10 +256,10 @@ void reset_game(){
     game.player.size = 10;
     game.player.speed = 2;
     game.player.using_turbo = 0;
-    game.player.energy_left = 0;
+    game.player.energy = 0;
     game.player.force_field = 0;
     game.player.points = 0;
-    game.player.last_hurt = 0;
+    game.player.hit = 0;
     for (i = 0; i < 50; i++){
         game.drops[i].state = DROP_INACTIVE;
     }
@@ -350,7 +350,7 @@ void render_world(){
     else if (game.player.force_field)
         filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size + game.player.force_field, FORCE_FIELD_COLOR);
 
-    if (game.player.last_hurt && (get_clock() - game.player.last_hurt < 1000)){
+    if (game.player.hit && (get_clock() - game.player.hit < 1000)){
         filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, WHITE);
         aacircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, WHITE);
     }
@@ -405,8 +405,8 @@ void update_game(){
     int max_active_enemies_count = 50, active_enemies_count = 0;
     Uint32 berzerk_duration;
 
-    if (game.player.energy_left > 500 && hardware.joystick_state.buttons[PSP_BUTTON_TRIANGLE] && !game.player.berzerk){
-        game.player.energy_left = 0;
+    if (game.player.energy > 500 && hardware.joystick_state.buttons[PSP_BUTTON_TRIANGLE] && !game.player.berzerk){
+        game.player.energy = 0;
         game.player.berzerk = get_clock();
         game.player.berzerk_field = 0;
         return;
@@ -456,7 +456,7 @@ void update_game(){
         if (game.drops[i].state != DROP_INACTIVE && game.drops[i].state != DROP_DYING){
             if (collide(game.player.x, game.player.y, game.player.size, game.drops[i].x, game.drops[i].y, game.drops[i].size)){
                 game.player.points += game.drops[i].size;
-                game.player.energy_left += game.drops[i].size;
+                game.player.energy += game.drops[i].size;
                 game.drops[i].state = DROP_DYING;
             }
         }
@@ -467,7 +467,7 @@ void update_game(){
         if (game.enemies[i].state){
             // We get hurt if we collide with enemies..
             if (collide(game.player.x, game.player.y, game.player.size, game.enemies[i].x, game.enemies[i].y, 2)){
-                game.player.last_hurt = get_clock();
+                game.player.hit = get_clock();
                 game.player.life--;
                 game.enemies[i].state = ENEMY_INACTIVE;
                 if (game.player.life == 0){
@@ -525,8 +525,8 @@ void update_game(){
     game.player.speed = 2;
     game.player.using_turbo = 0;
     if (game.player.berzerk || hardware.joystick_state.buttons[PSP_BUTTON_CIRCLE]){
-        if (game.player.berzerk || game.player.energy_left >= 0){
-            game.player.berzerk || --game.player.energy_left;
+        if (game.player.berzerk || game.player.energy >= 0){
+            game.player.berzerk || --game.player.energy;
             game.player.speed = 4;
             game.player.using_turbo = 1;
         }
@@ -549,8 +549,8 @@ void update_game(){
     }
 
     // USE THE FORCE ?
-    if (hardware.joystick_state.buttons[PSP_BUTTON_CROSS] && game.player.energy_left){
-        --game.player.energy_left;
+    if (hardware.joystick_state.buttons[PSP_BUTTON_CROSS] && game.player.energy){
+        --game.player.energy;
         game.player.force_field++;
     }
     else {
