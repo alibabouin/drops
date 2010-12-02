@@ -28,10 +28,13 @@ PSP_HEAP_SIZE_MAX();
 #define WIDTH 480
 #define HEIGHT 272
 #define BPP 32
-#define BG_COLOR SDL_MapRGB(hardware.screen->format, 0x55, 0x55, 0x44)
-#define BLACK SDL_MapRGB(hardware.screen->format, 0, 0, 0)
-#define WHITE SDL_MapRGB(hardware.screen->format, 255, 255, 255)
+#define BLACK 0x0
+#define WHITE 0xffffffff
 
+#define TINT_COLOR 0x000000aa
+#define BG_COLOR 0x555544ff
+#define PLAYER_COLOR 0xffbbbbff
+#define FORCE_FIELD_COLOR 0xffffff80
 
 #ifdef _PSP_FW_VERSION
 #define random lrand48
@@ -90,6 +93,8 @@ typedef struct Player {
     int energy_left;
     int points;
     int last_hurt;
+    Uint32 berzerk;
+    int berzerk_field;
 } Player;
 
 enum DropState {
@@ -249,7 +254,7 @@ void reset_game(){
 void quit(){
     render_world();
     apply_fx(PIXELATE, NULL);
-    boxRGBA(hardware.screen, 0, 0, WIDTH, HEIGHT, 0, 0, 0, 200);
+    boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, 0x000000aa);
     print_center(hardware.screen, hardware.big_font, "Shutting down...", 255, 255, 255);
     SDL_Flip(hardware.screen);
     SDL_Quit();
@@ -263,19 +268,17 @@ void quit(){
 void init(){
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO) == -1)
         quit();
+    SDL_ShowCursor(SDL_DISABLE);
+
     hardware.joystick = SDL_JoystickOpen(0);
     SDL_JoystickEventState(SDL_ENABLE);
-    if (TTF_Init() == -1)
-        quit();
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) < 0)
-        quit();
-
-    SDL_ShowCursor(SDL_DISABLE);
 
     hardware.screen = SDL_SetVideoMode(WIDTH, HEIGHT, BPP, SDL_HWSURFACE | SDL_ANYFORMAT | SDL_DOUBLEBUF);
     if (hardware.screen == NULL)
         quit();
 
+    if (TTF_Init() == -1)
+        quit();
     hardware.big_font = TTF_OpenFont("DroidSans.ttf", 20);
     hardware.medium_font = TTF_OpenFont("DroidSans.ttf", 12);
 
@@ -286,36 +289,45 @@ void render_world(){
     char msg[256];
     int width, height, i;
 
-    SDL_FillRect(hardware.screen, NULL, BG_COLOR);
+    SDL_FillRect(hardware.screen, NULL, SDL_MapRGB(hardware.screen->format, 0x55, 0x55, 0x44));
     for (i = 0; i < 50; i++){
-        int color = SDL_MapRGB(hardware.screen->format, 0, 0, 0);
+        Uint32 color = 0;
         if (game.drops[i].state){
             switch (game.drops[i].state){
-                case DROP_GROWING: color = SDL_MapRGB(hardware.screen->format, 0xff, 0xbb, 0xbb); break;
-                case DROP_ACTIVE: color = SDL_MapRGB(hardware.screen->format, 0xff, 0x75, 0x75); break;
-                case DROP_DYING: color = SDL_MapRGB(hardware.screen->format, 0xd0, 0xbc, 0xfe); break;
+                case DROP_ACTIVE: color = 0x019875ff; break;
+                case DROP_GROWING:
+                case DROP_DYING: color = 0xa6c780ff; break;
             }
-            filledCircleColor(hardware.screen, game.drops[i].x, game.drops[i].y, game.drops[i].size, color);
-            aacircleColor(hardware.screen, game.drops[i].x, game.drops[i].y, game.drops[i].size, color);
+            if (game.player.berzerk){
+                filledCircleColor(hardware.screen, game.drops[i].x + random() % 4, game.drops[i].y + random() % 4, game.drops[i].size, color);
+                aacircleColor(hardware.screen, game.drops[i].x + random() % 4, game.drops[i].y + random() % 4, game.drops[i].size, color);
+            }
+            else {
+                filledCircleColor(hardware.screen, game.drops[i].x, game.drops[i].y, game.drops[i].size, color);
+                aacircleColor(hardware.screen, game.drops[i].x, game.drops[i].y, game.drops[i].size, color);
+            }
         }
     }
 
     for (i = 0; i < 50; i++){
         if (game.enemies[i].state){
-            filledCircleRGBA(hardware.screen, game.enemies[i].x, game.enemies[i].y, 2, 0xff, 0xff, 0xff, 255);
-            aacircleRGBA(hardware.screen, game.enemies[i].x, game.enemies[i].y, 2, 0xff, 0xff, 0xff, 255);
+            filledCircleColor(hardware.screen, game.enemies[i].x, game.enemies[i].y, 2, WHITE);
+            aacircleColor(hardware.screen, game.enemies[i].x, game.enemies[i].y, 2, WHITE);
         }
     }
 
-    filledCircleRGBA(hardware.screen, game.player.x, game.player.y, game.player.size + game.player.force_field, 0xff, 0xff, 0xff, 128);
+    if (game.player.berzerk)
+        filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size + game.player.berzerk_field, FORCE_FIELD_COLOR);
+    else if (game.player.force_field)
+        filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size + game.player.force_field, FORCE_FIELD_COLOR);
 
     if (game.player.last_hurt && (SDL_GetTicks() - game.player.last_hurt < 1000)){
-        filledCircleRGBA(hardware.screen, game.player.x, game.player.y, game.player.size, 0xff, 0xff, 0xff, 255);
-        aacircleRGBA(hardware.screen, game.player.x, game.player.y, game.player.size, 0xff, 0xff, 0xff, 255);
+        filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, WHITE);
+        aacircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, WHITE);
     }
     else {
-        filledCircleRGBA(hardware.screen, game.player.x, game.player.y, game.player.size, 0xff, 0xbb, 0xbb, 255);
-        aacircleRGBA(hardware.screen, game.player.x, game.player.y, game.player.size, 0xff, 0xbb, 0xbb, 255);
+        filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, PLAYER_COLOR);
+        aacircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, PLAYER_COLOR);
     }
 
 /*
@@ -325,10 +337,23 @@ void render_world(){
         print(hardware.screen, 10, 10, hardware.medium_font, msg, 255, 255, 255);
     }
 */
+    if (game.player.berzerk){
+        strcpy(msg, "--BERZERK--");
+        TTF_SizeText(hardware.medium_font, msg, &width, &height);
+        print(hardware.screen, 10, 10, hardware.medium_font, msg, 255, 255, 255);
+    }
+    else {
+        snprintf(msg, 256, "POW %d", game.player.energy_left);
+        TTF_SizeText(hardware.medium_font, msg, &width, &height);
+        print(hardware.screen, 10, 10, hardware.medium_font, msg, 255, 255, 255);
+    }
 
     snprintf(msg, 256, "%d", game.player.life);
     TTF_SizeText(hardware.big_font, msg, &width, &height);
     print(hardware.screen, WIDTH - 100, 10, hardware.big_font, msg, 0xff, 0xbb, 0xbb);
+
+    filledCircleColor(hardware.screen, WIDTH - 110, 22, 4, PLAYER_COLOR);
+    aacircleColor(hardware.screen, WIDTH - 110, 22, 4, PLAYER_COLOR);
 
     snprintf(msg, 256, "%d", game.player.points);
     TTF_SizeText(hardware.big_font, msg, &width, &height);
@@ -341,13 +366,13 @@ void display(){
     case NO_GAME:
         render_world();
         apply_fx(PIXELATE, NULL);
-        boxRGBA(hardware.screen, 0, 0, WIDTH, HEIGHT, 0, 0, 0, 200);
+        boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
         print_center(hardware.screen, hardware.big_font, "Press START to play", 255, 255, 255);
         break;
     case GAME_PAUSED:
         render_world();
         apply_fx(PIXELATE, NULL);
-        boxRGBA(hardware.screen, 0, 0, WIDTH, HEIGHT, 0, 0, 0, 200);
+        boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
         print_center(hardware.screen, hardware.big_font, "Paused", 255, 255, 255);
         break;
     case GAME_PLAYING:
@@ -356,7 +381,7 @@ void display(){
     case GAME_OVER:
         render_world();
         apply_fx(PIXELATE, NULL);
-        boxRGBA(hardware.screen, 0, 0, WIDTH, HEIGHT, 0, 0, 0, 200);
+        boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
         print_center(hardware.screen, hardware.big_font, "GAME OVER", 255, 255, 255);
         break;
     }
@@ -367,6 +392,20 @@ void update_game(){
     int dx = 0, dy = 0, i;
     int max_active_drops_count = 10, drops_to_activate, active_drops_count = 0;
     int max_active_enemies_count = 50, active_enemies_count = 0;
+    Uint32 berzerk_duration;
+
+    if (game.player.energy_left > 500 && hardware.joystick_state.buttons[PSP_BUTTON_TRIANGLE] && !game.player.berzerk){
+        game.player.energy_left = 0;
+        game.player.berzerk = SDL_GetTicks();
+        game.player.berzerk_field = 0;
+        return;
+    }
+
+    berzerk_duration = SDL_GetTicks() - game.player.berzerk;
+    game.player.berzerk_field = berzerk_duration / 4;
+    if (berzerk_duration > 1500){
+        game.player.berzerk = 0;
+    }
 
     // let the drops grow or die
     for (i = 0; i < 50; i++){
@@ -425,6 +464,10 @@ void update_game(){
                     return;
                 }
             }
+            // ..unless we GO BERZERK
+            else if (game.player.berzerk && collide(game.player.x, game.player.y, game.player.size +  + (game.player.berzerk ? game.player.berzerk_field : 0), game.enemies[i].x, game.enemies[i].y, 2)){
+                game.enemies[i].state = ENEMY_INACTIVE;
+            }
             // ..unless we USE THE FORCE
             else if (game.player.force_field && collide(game.player.x, game.player.y, game.player.size + game.player.force_field, game.enemies[i].x, game.enemies[i].y, 2)){
                 game.enemies[i].state = ENEMY_INACTIVE;
@@ -433,31 +476,35 @@ void update_game(){
     }
 
     // Make the Enemies chase us
-    for (i = 0; i < 50; i++){
-        if (game.enemies[i].state){
-            if (game.enemies[i].x > game.player.x)
-                game.enemies[i].x--;
-            if (game.enemies[i].y > game.player.y)
-                game.enemies[i].y--;
-            if (game.enemies[i].x < game.player.x)
-                game.enemies[i].x++;
-            if (game.enemies[i].y < game.player.y)
-                game.enemies[i].y++;
+    if (!game.player.berzerk){
+        for (i = 0; i < 50; i++){
+            if (game.enemies[i].state){
+                if (game.enemies[i].x > game.player.x)
+                    game.enemies[i].x--;
+                if (game.enemies[i].y > game.player.y)
+                    game.enemies[i].y--;
+                if (game.enemies[i].x < game.player.x)
+                    game.enemies[i].x++;
+                if (game.enemies[i].y < game.player.y)
+                    game.enemies[i].y++;
+            }
         }
     }
 
     // Add Enemies every 0.5s unless max reached
-    for (i = 0; i < 50; i++){
-        active_enemies_count += game.enemies[i].state != ENEMY_INACTIVE;
-    }
-    if ((SDL_GetTicks() - game.last_enemy_timestamp > 500) && active_enemies_count < max_active_enemies_count){
+    if (!game.player.berzerk){
         for (i = 0; i < 50; i++){
-            if (game.enemies[i].state == ENEMY_INACTIVE){
-                game.enemies[i].state = ENEMY_ACTIVE;
-                game.enemies[i].x = random() % 2 ? 10 : WIDTH - 10;
-                game.enemies[i].y = random() % 2 ? 10 : HEIGHT - 10;
-                game.last_enemy_timestamp = SDL_GetTicks();
-                break;
+            active_enemies_count += game.enemies[i].state != ENEMY_INACTIVE;
+        }
+        if ((SDL_GetTicks() - game.last_enemy_timestamp > 500) && active_enemies_count < max_active_enemies_count){
+            for (i = 0; i < 50; i++){
+                if (game.enemies[i].state == ENEMY_INACTIVE){
+                    game.enemies[i].state = ENEMY_ACTIVE;
+                    game.enemies[i].x = random() % 2 ? 10 : WIDTH - 10;
+                    game.enemies[i].y = random() % 2 ? 10 : HEIGHT - 10;
+                    game.last_enemy_timestamp = SDL_GetTicks();
+                    break;
+                }
             }
         }
     }
@@ -465,9 +512,9 @@ void update_game(){
     // Use turbo ?
     game.player.speed = 2;
     game.player.using_turbo = 0;
-    if (hardware.joystick_state.buttons[PSP_BUTTON_CIRCLE]){
-        if (game.player.energy_left >= 0){
-            game.player.energy_left--;
+    if (game.player.berzerk || hardware.joystick_state.buttons[PSP_BUTTON_CIRCLE]){
+        if (game.player.berzerk || game.player.energy_left >= 0){
+            game.player.berzerk || --game.player.energy_left;
             game.player.speed = 4;
             game.player.using_turbo = 1;
         }
@@ -482,14 +529,16 @@ void update_game(){
        dy = -game.player.speed;
     if (hardware.joystick_state.analog_y > 130)
        dy = game.player.speed;
-    game.player.x += dx;
-    game.player.y += dy;
-    game.player.x = keep_inside(game.player.x, game.player.size, WIDTH - game.player.size);
-    game.player.y = keep_inside(game.player.y, game.player.size, HEIGHT - game.player.size);
+    if (!game.player.berzerk){
+        game.player.x += dx;
+        game.player.y += dy;
+        game.player.x = keep_inside(game.player.x, game.player.size, WIDTH - game.player.size);
+        game.player.y = keep_inside(game.player.y, game.player.size, HEIGHT - game.player.size);
+    }
 
     // USE THE FORCE ?
     if (hardware.joystick_state.buttons[PSP_BUTTON_CROSS] && game.player.energy_left){
-        game.player.energy_left--;
+        --game.player.energy_left;
         game.player.force_field++;
     }
     else {
