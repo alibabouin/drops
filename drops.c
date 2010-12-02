@@ -142,6 +142,9 @@ typedef struct Game {
 Game game;
 Hardware hardware;
 
+void render_world();
+
+
 int collide(int x1, int y1, int size1, int x2, int y2, int size2){
     int sqd = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
     return sqd < (size1 + size2) * (size1 + size2);
@@ -153,6 +156,19 @@ int keep_inside(int v, int min, int max){
     if (v > max)
         return max;
     return v;
+}
+
+void apply_fx(FX fx, void *params){
+    SDL_Surface *mini, *maxi;
+    switch (fx){
+    case PIXELATE:
+        mini = zoomSurface(hardware.screen, 0.125, 0.125, 1);
+        maxi = zoomSurface(mini, 8, 8, 0);
+        SDL_FreeSurface(mini);
+        SDL_BlitSurface(maxi, NULL, hardware.screen, NULL);
+        SDL_FreeSurface(maxi);
+        break;
+    }
 }
 
 void update_joy_state(){
@@ -231,6 +247,8 @@ void reset_game(){
 }
 
 void quit(){
+    render_world();
+    apply_fx(PIXELATE, NULL);
     boxRGBA(hardware.screen, 0, 0, WIDTH, HEIGHT, 0, 0, 0, 200);
     print_center(hardware.screen, hardware.big_font, "Shutting down...", 255, 255, 255);
     SDL_Flip(hardware.screen);
@@ -317,23 +335,13 @@ void render_world(){
     print(hardware.screen, WIDTH - width - 10, 10, hardware.big_font, msg, 255, 255, 255);
 }
 
-void apply_fx(FX fx, void *params){
-    SDL_Surface *mini, *maxi;
-    switch (fx){
-    case PIXELATE:
-        mini = zoomSurface(hardware.screen, 0.125, 0.125, 1);
-        maxi = zoomSurface(mini, 8, 8, 0);
-        SDL_FreeSurface(mini);
-        SDL_BlitSurface(maxi, NULL, hardware.screen, NULL);
-        SDL_FreeSurface(maxi);
-        break;
-    }
-}
 
 void display(){
     switch (game.state){
     case NO_GAME:
-        SDL_FillRect(hardware.screen, NULL, BLACK);
+        render_world();
+        apply_fx(PIXELATE, NULL);
+        boxRGBA(hardware.screen, 0, 0, WIDTH, HEIGHT, 0, 0, 0, 200);
         print_center(hardware.screen, hardware.big_font, "Press START to play", 255, 255, 255);
         break;
     case GAME_PAUSED:
