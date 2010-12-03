@@ -143,6 +143,7 @@ enum GameState {
 
 typedef struct Game {
     int state;
+    int level;
     Drop drops[50];
     Enemy enemies[50];
     Player player;
@@ -273,6 +274,7 @@ int can_berzerk(){
 
 void reset_game(){
     int i;
+    game.level = 1;
     game.player.x = WIDTH / 2;
     game.player.y = HEIGHT / 2;
     game.player.life = 5;
@@ -400,6 +402,10 @@ void render_world(){
     filledCircleColor(hardware.screen, x, y, game.player.size, color);
     aacircleColor(hardware.screen, x, y, game.player.size, color);
 
+    snprintf(msg, 256, "LVL %d", game.level);
+    TTF_SizeText(hardware.medium_font, msg, &width, &height);
+    print(hardware.screen, 10, 10, hardware.medium_font, msg, 0xff, 0xff, 0xff);
+
     snprintf(msg, 256, "%d", game.player.life);
     TTF_SizeText(hardware.big_font, msg, &width, &height);
     print(hardware.screen, WIDTH - 100, 10, hardware.big_font, msg, 0xff, 0xbb, 0xbb);
@@ -449,8 +455,10 @@ void redraw(){
 
 void update_game(){
     int dx = 0, dy = 0, i;
-    int max_active_drops_count = 10, drops_to_activate, active_drops_count = 0;
-    int max_active_enemies_count = 50, active_enemies_count = 0;
+    int max_active_drops_count = keep_inside(20 - (game.level / 2), 5, 50);
+    int drops_to_activate, active_drops_count = 0;
+    int max_active_enemies_count = keep_inside(10 + game.level * 2, 0, 50);
+    int active_enemies_count = 0;
     Uint32 berzerk_duration;
 
     if (can_berzerk() && hardware.joystick_state.buttons[PSP_BUTTON_TRIANGLE] && !game.player.berzerk){
@@ -487,15 +495,17 @@ void update_game(){
     for (i = 0; i < 50; i++){
         active_drops_count += game.drops[i].state != DROP_INACTIVE;
     }
-    drops_to_activate = max_active_drops_count - active_drops_count;
-    for (i = 0; drops_to_activate && i < 50; i++){
-        if (game.drops[i].state == DROP_INACTIVE){
-            game.drops[i].state = DROP_GROWING;
-            game.drops[i].grown_size = 5 + (random() % 30);
-            game.drops[i].size = 1;
-            game.drops[i].x = game.drops[i].grown_size + (random() % (WIDTH - 2 * game.drops[i].grown_size));
-            game.drops[i].y = game.drops[i].grown_size + (random() % (HEIGHT - 2 * game.drops[i].grown_size));
-            drops_to_activate--;
+    if (active_drops_count < max_active_drops_count){
+        drops_to_activate = max_active_drops_count - active_drops_count;
+        for (i = 0; drops_to_activate && i < 50; i++){
+            if (game.drops[i].state == DROP_INACTIVE){
+                game.drops[i].state = DROP_GROWING;
+                game.drops[i].grown_size = 5 + (random() % (30 - game.level));
+                game.drops[i].size = 1;
+                game.drops[i].x = game.drops[i].grown_size + (random() % (WIDTH - 2 * game.drops[i].grown_size));
+                game.drops[i].y = game.drops[i].grown_size + (random() % (HEIGHT - 2 * game.drops[i].grown_size));
+                drops_to_activate--;
+            }
         }
     }
 
@@ -605,6 +615,11 @@ void update_game(){
         game.player.force_field--;
     }
     game.player.force_field = keep_inside(game.player.force_field, 0, 20);
+
+    // Next Level ?
+    if (game.player.points > (game.level << 1) * 500){
+        game.level = keep_inside(game.level + 1, 1, 20);
+    }
 }
 
 void loop(){
