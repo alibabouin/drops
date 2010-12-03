@@ -136,6 +136,7 @@ typedef struct Hardware {
     SDL_Surface *happy_face;
     SDL_Surface *paused_face;
     SDL_Surface *game_over_face;
+    SDL_Surface *background;
 } Hardware;
 
 enum GameState {
@@ -336,6 +337,8 @@ void init(){
     hardware.happy_face = IMG_Load("happy.png");
     hardware.paused_face = IMG_Load("paused.png");
 
+    hardware.background = IMG_Load("bg.png");
+
     reset_game();
 }
 
@@ -352,7 +355,7 @@ void render_world(){
     int width, height, i, x, y;
     Uint32 color = 0;
 
-    SDL_FillRect(hardware.screen, NULL, SDL_MapRGB(hardware.screen->format, R(BG_COLOR), G(BG_COLOR), B(BG_COLOR)));
+    SDL_BlitSurface(hardware.background, NULL, hardware.screen, NULL);
     for (i = 0; i < 50; i++){
         if (game.drops[i].state){
             switch (game.drops[i].state){
