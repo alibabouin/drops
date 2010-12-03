@@ -552,14 +552,15 @@ void update_game(){
     if (!game.player.berzerk){
         for (i = 0; i < 50; i++){
             if (game.enemies[i].state){
+                int enemy_speed = random() % 2 + 1;
                 if (game.enemies[i].x > game.player.x)
-                    game.enemies[i].x--;
+                    game.enemies[i].x -= enemy_speed;
                 if (game.enemies[i].y > game.player.y)
-                    game.enemies[i].y--;
+                    game.enemies[i].y -= enemy_speed;
                 if (game.enemies[i].x < game.player.x)
-                    game.enemies[i].x++;
+                    game.enemies[i].x += enemy_speed;
                 if (game.enemies[i].y < game.player.y)
-                    game.enemies[i].y++;
+                    game.enemies[i].y += enemy_speed;
             }
         }
     }
