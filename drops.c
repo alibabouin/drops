@@ -267,6 +267,10 @@ void print_with_logo(SDL_Surface *dst, TTF_Font *font, char *text, SDL_Surface *
     rectangleColor(hardware.screen, pos.x - 1, pos.y - 1, pos.x + 30, pos.y + 30, WHITE);
 }
 
+int can_berzerk(){
+    return game.player.energy > 100;
+}
+
 void reset_game(){
     int i;
     game.player.x = WIDTH / 2;
@@ -339,7 +343,7 @@ void draw_clock(){
 
 void render_world(){
     char msg[256];
-    int width, height, i;
+    int width, height, i, x, y;
     Uint32 color = 0;
 
     SDL_FillRect(hardware.screen, NULL, SDL_MapRGB(hardware.screen->format, 0x55, 0x55, 0x44));
@@ -373,11 +377,19 @@ void render_world(){
     else if (game.player.force_field)
         filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size + game.player.force_field, FORCE_FIELD_COLOR);
 
+
+    x = game.player.x;
+    y = game.player.y;
     if (game.player.hit && (get_clock() - game.player.hit < 1000)){
         color = WHITE;
     }
     else if (game.player.force_field){
         color = PLAYER_FORCE_COLOR;
+    }
+    else if (game.player.berzerk){
+        color = BLACK;
+        x = game.player.x + random() % 3 - 1;
+        y = game.player.y + random() % 3 - 1;
     }
     else if (game.player.turbo){
         color = PLAYER_TURBO_COLOR;
@@ -385,15 +397,23 @@ void render_world(){
     else {
         color = PLAYER_COLOR;
     }
-    filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, color);
-    aacircleColor(hardware.screen, game.player.x, game.player.y, game.player.size, color);
+    filledCircleColor(hardware.screen, x, y, game.player.size, color);
+    aacircleColor(hardware.screen, x, y, game.player.size, color);
 
     snprintf(msg, 256, "%d", game.player.life);
     TTF_SizeText(hardware.big_font, msg, &width, &height);
     print(hardware.screen, WIDTH - 100, 10, hardware.big_font, msg, 0xff, 0xbb, 0xbb);
 
-    filledCircleColor(hardware.screen, WIDTH - 110, 22, 4, PLAYER_COLOR);
-    aacircleColor(hardware.screen, WIDTH - 110, 22, 4, PLAYER_COLOR);
+    if (can_berzerk()){
+        x = WIDTH - 110 + random() % 3 - 1;
+        y = 22 + random() % 3 - 1;
+        filledCircleColor(hardware.screen, x, y, 7, BLACK);
+        aacircleColor(hardware.screen, x, y, 7, BLACK);
+    }
+    else {
+        filledCircleColor(hardware.screen, WIDTH - 110, 22, 4, PLAYER_COLOR);
+        aacircleColor(hardware.screen, WIDTH - 110, 22, 4, PLAYER_COLOR);
+    }
 
     snprintf(msg, 256, "%d", game.player.points);
     TTF_SizeText(hardware.big_font, msg, &width, &height);
@@ -433,7 +453,7 @@ void update_game(){
     int max_active_enemies_count = 50, active_enemies_count = 0;
     Uint32 berzerk_duration;
 
-    if (game.player.energy > 500 && hardware.joystick_state.buttons[PSP_BUTTON_TRIANGLE] && !game.player.berzerk){
+    if (can_berzerk() && hardware.joystick_state.buttons[PSP_BUTTON_TRIANGLE] && !game.player.berzerk){
         game.player.energy = 0;
         game.player.berzerk = get_clock();
         game.player.berzerk_field = 0;
