@@ -364,8 +364,10 @@ void render_world(){
                 case DROP_DYING: color = 0xa6c780ff; break;
             }
             if (game.player.berzerk){
-                filledCircleColor(hardware.screen, game.drops[i].x + random() % 4, game.drops[i].y + random() % 4, game.drops[i].size, color);
-                aacircleColor(hardware.screen, game.drops[i].x + random() % 4, game.drops[i].y + random() % 4, game.drops[i].size, color);
+                x = game.drops[i].x + random() % 4;
+                y = game.drops[i].y + random() % 4;
+                filledCircleColor(hardware.screen, x, y, game.drops[i].size, color);
+                aacircleColor(hardware.screen, x, y, game.drops[i].size, color);
             }
             else {
                 filledCircleColor(hardware.screen, game.drops[i].x, game.drops[i].y, game.drops[i].size, color);
