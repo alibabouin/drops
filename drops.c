@@ -330,14 +330,14 @@ void init(){
 
     if (TTF_Init() == -1)
         quit();
-    hardware.big_font = TTF_OpenFont("DroidSans.ttf", 20);
-    hardware.medium_font = TTF_OpenFont("DroidSans.ttf", 12);
+    hardware.big_font = TTF_OpenFont("media/DroidSans.ttf", 20);
+    hardware.medium_font = TTF_OpenFont("media/DroidSans.ttf", 12);
 
-    hardware.game_over_face = IMG_Load("gameover.png");
-    hardware.happy_face = IMG_Load("happy.png");
-    hardware.paused_face = IMG_Load("paused.png");
+    hardware.game_over_face = IMG_Load("media/gameover.png");
+    hardware.happy_face = IMG_Load("media/happy.png");
+    hardware.paused_face = IMG_Load("media/paused.png");
 
-    hardware.background = IMG_Load("bg.png");
+    hardware.background = IMG_Load("media/bg.png");
 
     reset_game();
 }

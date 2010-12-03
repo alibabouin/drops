@@ -13,6 +13,6 @@ You need libsdl-dev on Linux and the pspsdk for PSP (I suggest 'Minimalist PSPSD
  > # For PSP
  > make -f Makefile.psp  # PSP
  > mkdir /path/to/psp/game/drops
- > cp DroidSans.ttf gameover.png happy.png paused.png EBOOT.PBP /path/to/psp/game/drops
+ > cp -r media EBOOT.PBP /path/to/psp/game/drops
 
 Note: currently playable only on PSP or via joypad/joystick on Linux
