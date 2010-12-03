@@ -318,6 +318,7 @@ void init(){
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO) == -1)
         quit();
     SDL_ShowCursor(SDL_DISABLE);
+    SDL_WM_SetCaption("drops", NULL);
 
     hardware.joystick = SDL_JoystickOpen(0);
     SDL_JoystickEventState(SDL_ENABLE);
