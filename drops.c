@@ -273,7 +273,7 @@ void print_with_logo(SDL_Surface *dst, TTF_Font *font, char *text, SDL_Surface *
 }
 
 int can_berzerk(){
-    return game.player.energy > 100;
+    return game.player.energy > 300;
 }
 
 void reset_game(){
