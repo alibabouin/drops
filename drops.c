@@ -29,12 +29,16 @@ PSP_HEAP_SIZE_MAX();
 #define HEIGHT 272
 #define BPP 32
 #define BLACK 0x000000ff
-#define WHITE 0xffffffff
+#define WHITE 0xf4f3d7ff
 
-#define TINT_COLOR 0x000000aa
-#define BG_COLOR 0x555544ff
-#define PLAYER_COLOR 0xffbbbbff
-#define PLAYER_FORCE_COLOR 0xff8e80ff
+#define R(rgba) ((rgba & 0xff000000) >> 24)
+#define G(rgba) ((rgba & 0x00ff0000) >> 16)
+#define B(rgba) ((rgba & 0x0000ff00) >> 8)
+
+#define TINT_COLOR 0x00000088
+#define BG_COLOR 0x363636ff
+#define PLAYER_COLOR 0xfd63aaff
+#define PLAYER_FORCE_COLOR 0xfd0e7cff
 #define PLAYER_TURBO_COLOR 0xffe273ff
 #define FORCE_FIELD_COLOR 0xffffff80
 
@@ -236,11 +240,10 @@ void update_joy_state(){
     joystick_state->analog_y = (SDL_JoystickGetAxis(joystick, 1) / 256) + 128;
 }
 
-void print(SDL_Surface *dst, int x, int y, TTF_Font *font, char *text, int r, int g, int b){
+void print(SDL_Surface *dst, int x, int y, TTF_Font *font, char *text, Uint32 rgba){
     SDL_Rect pos;
     SDL_Surface *src;
-    SDL_Color color = {r, g, b};
-    if (font == NULL) return;
+    SDL_Color color = { R(rgba), G(rgba), B(rgba) };
     pos.x = x;
     pos.y = y;
     src = TTF_RenderText_Blended(font, text, color);
@@ -249,10 +252,10 @@ void print(SDL_Surface *dst, int x, int y, TTF_Font *font, char *text, int r, in
 }
 
 // Draw centered text
-void print_center(SDL_Surface *dst, TTF_Font *font, char *text, int r, int g, int b){
+void print_center(SDL_Surface *dst, TTF_Font *font, char *text, Uint32 rgba){
     int width, height;
     TTF_SizeText(font, text, &width, &height);
-    print(hardware.screen, (WIDTH - width) / 2, (HEIGHT - height) / 2, font, text, r, g, b);
+    print(hardware.screen, (WIDTH - width) / 2, (HEIGHT - height) / 2, font, text, rgba);
 }
 
 // Draw centered text with a logo
@@ -263,7 +266,7 @@ void print_with_logo(SDL_Surface *dst, TTF_Font *font, char *text, SDL_Surface *
     TTF_SizeText(font, text, &width, &height);
     pos.x = (WIDTH - width) / 2 - 40;
     pos.y = (HEIGHT - height) / 2 - (30 - height) / 2;
-    print(hardware.screen, (WIDTH - width) / 2, (HEIGHT - height) / 2, font, text, 255, 255, 255);
+    print(hardware.screen, (WIDTH - width) / 2, (HEIGHT - height) / 2, font, text, WHITE);
     SDL_BlitSurface(logo, NULL, hardware.screen, &pos);
     rectangleColor(hardware.screen, pos.x - 1, pos.y - 1, pos.x + 30, pos.y + 30, WHITE);
 }
@@ -300,8 +303,8 @@ void reset_game(){
 void quit(){
     render_world();
     apply_fx(PIXELATE, NULL);
-    boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, 0x000000aa);
-    print_center(hardware.screen, hardware.big_font, "Shutting down...", 255, 255, 255);
+    boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
+    print_center(hardware.screen, hardware.big_font, "Shutting down...", WHITE);
     SDL_Flip(hardware.screen);
     SDL_Quit();
 #ifdef _PSP_FW_VERSION
@@ -340,7 +343,7 @@ void draw_clock(){
     char msg[256];
     snprintf(msg, 256, "%d", get_clock());
     TTF_SizeText(hardware.big_font, msg, &width, &height);
-    print(hardware.screen, 10, 10, hardware.medium_font, msg, 255, 255, 255);
+    print(hardware.screen, 10, 10, hardware.medium_font, msg, WHITE);
 }
 
 void render_world(){
@@ -348,7 +351,7 @@ void render_world(){
     int width, height, i, x, y;
     Uint32 color = 0;
 
-    SDL_FillRect(hardware.screen, NULL, SDL_MapRGB(hardware.screen->format, 0x55, 0x55, 0x44));
+    SDL_FillRect(hardware.screen, NULL, SDL_MapRGB(hardware.screen->format, R(BG_COLOR), G(BG_COLOR), B(BG_COLOR)));
     for (i = 0; i < 50; i++){
         if (game.drops[i].state){
             switch (game.drops[i].state){
@@ -404,11 +407,11 @@ void render_world(){
 
     snprintf(msg, 256, "LVL %d", game.level);
     TTF_SizeText(hardware.medium_font, msg, &width, &height);
-    print(hardware.screen, 10, 10, hardware.medium_font, msg, 0xff, 0xff, 0xff);
+    print(hardware.screen, 10, 10, hardware.medium_font, msg, WHITE);
 
     snprintf(msg, 256, "%d", game.player.life);
     TTF_SizeText(hardware.big_font, msg, &width, &height);
-    print(hardware.screen, WIDTH - 100, 10, hardware.big_font, msg, 0xff, 0xbb, 0xbb);
+    print(hardware.screen, WIDTH - 100, 10, hardware.big_font, msg, PLAYER_COLOR);
 
     if (can_berzerk()){
         x = WIDTH - 110 + random() % 3 - 1;
@@ -423,7 +426,7 @@ void render_world(){
 
     snprintf(msg, 256, "%d", game.player.points);
     TTF_SizeText(hardware.big_font, msg, &width, &height);
-    print(hardware.screen, WIDTH - width - 10, 10, hardware.big_font, msg, 255, 255, 255);
+    print(hardware.screen, WIDTH - width - 10, 10, hardware.big_font, msg, WHITE);
 }
 
 void redraw(){
