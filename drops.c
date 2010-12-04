@@ -80,7 +80,7 @@ enum {
 #endif
 
 typedef enum FX {
-    PIXELATE,
+    FX_PIXELATE,
 } FX;
 
 typedef struct JoystickState {
@@ -88,6 +88,54 @@ typedef struct JoystickState {
     int analog_x;
     int analog_y;
 } JoystickState;
+
+enum BonusState {
+    BONUS_STATE_INACTIVE = 0,
+    BONUS_STATE_GROWING,
+    BONUS_STATE_ACTIVE,
+    BONUS_STATE_DYING
+};
+
+enum BonusType {
+    BONUS_TYPE_NONE = -1,
+    BONUS_TYPE_TURBO,
+    BONUS_TYPE_FREEZE,
+    BONUS_TYPE_REPEL,
+    BONUS_TYPE_BOMB,
+    BONUS_TYPE_NUM
+};
+
+typedef struct Bonus {
+    enum BonusState state;
+    enum BonusType type;
+    int x, y;
+    int size;
+    int grown_size;
+} Bonus;
+
+enum DropState {
+    DROP_STATE_INACTIVE = 0,
+    DROP_STATE_GROWING,
+    DROP_STATE_ACTIVE,
+    DROP_STATE_DYING
+};
+
+typedef struct Drop {
+    enum DropState state;
+    int x, y;
+    int size;
+    int grown_size;
+} Drop;
+
+enum EnemyState {
+    ENEMY_STATE_INACTIVE = 0,
+    ENEMY_STATE_ACTIVE
+};
+
+typedef struct Enemy {
+    int state;
+    int x, y;
+} Enemy;
 
 typedef struct Player {
     int x, y;
@@ -101,31 +149,9 @@ typedef struct Player {
     Uint32 hit;
     Uint32 berzerk;
     int berzerk_field;
+    enum BonusType bonus;
+    Uint32 bonus_start;
 } Player;
-
-enum DropState {
-    DROP_INACTIVE = 0,
-    DROP_GROWING,
-    DROP_ACTIVE,
-    DROP_DYING
-};
-
-typedef struct Drop {
-    int state;
-    int x, y;
-    int size;
-    int grown_size;
-} Drop;
-
-enum EnemyState {
-    ENEMY_INACTIVE = 0,
-    ENEMY_ACTIVE
-};
-
-typedef struct Enemy {
-    int state;
-    int x, y;
-} Enemy;
 
 typedef struct Hardware {
     SDL_Joystick *joystick;
@@ -137,13 +163,14 @@ typedef struct Hardware {
     SDL_Surface *paused_face;
     SDL_Surface *game_over_face;
     SDL_Surface *background;
+    Uint32 bonus_colors[BONUS_TYPE_NUM];
 } Hardware;
 
 enum GameState {
-    NO_GAME,
-    GAME_PLAYING,
-    GAME_PAUSED,
-    GAME_OVER
+    GAME_STATE_START_SCREEN,
+    GAME_STATE_PLAYING,
+    GAME_STATE_PAUSED,
+    GAME_STATE_OVER
 };
 
 typedef struct Game {
@@ -152,6 +179,7 @@ typedef struct Game {
     Drop drops[50];
     Enemy enemies[50];
     Player player;
+    Bonus bonus;
     Uint32 last_enemy_timestamp;
     Uint32 ticks, last_start;
 } Game;
@@ -178,7 +206,7 @@ int keep_inside(int v, int min, int max){
 void apply_fx(FX fx, void *params){
     SDL_Surface *mini, *maxi;
     switch (fx){
-    case PIXELATE:
+    case FX_PIXELATE:
         mini = zoomSurface(hardware.screen, 0.125, 0.125, 1);
         maxi = zoomSurface(mini, 8, 8, 0);
         SDL_FreeSurface(mini);
@@ -198,7 +226,7 @@ void start_clock(){
 }
 
 Uint32 get_clock(){
-    if (game.state == GAME_PLAYING){
+    if (game.state == GAME_STATE_PLAYING){
         return game.ticks + SDL_GetTicks() - game.last_start;
     }
     else {
@@ -272,6 +300,11 @@ void print_with_logo(SDL_Surface *dst, TTF_Font *font, char *text, SDL_Surface *
     rectangleColor(hardware.screen, pos.x - 1, pos.y - 1, pos.x + 30, pos.y + 30, WHITE);
 }
 
+void fill_circle(int x, int y, int r, Uint32 rgba){
+    filledCircleColor(hardware.screen, x, y, r, rgba);
+    aacircleColor(hardware.screen, x, y, r, rgba);
+}
+
 int can_berzerk(){
     return game.player.energy > 300;
 }
@@ -289,13 +322,16 @@ void reset_game(){
     game.player.force_field = 0;
     game.player.points = 0;
     game.player.hit = 0;
+    game.player.bonus = BONUS_TYPE_NONE;
+    game.player.bonus_start = 0;
     for (i = 0; i < 50; i++){
-        game.drops[i].state = DROP_INACTIVE;
+        game.drops[i].state = DROP_STATE_INACTIVE;
     }
     for (i = 0; i < 50; i++){
-        game.enemies[i].state = ENEMY_INACTIVE;
+        game.enemies[i].state = ENEMY_STATE_INACTIVE;
     }
-    game.state = NO_GAME;
+    game.bonus.state = BONUS_STATE_INACTIVE;
+    game.state = GAME_STATE_START_SCREEN;
     game.last_enemy_timestamp = 0;
     game.ticks = 0;
     game.last_start = 0;
@@ -303,7 +339,7 @@ void reset_game(){
 
 void quit(){
     render_world();
-    apply_fx(PIXELATE, NULL);
+    apply_fx(FX_PIXELATE, NULL);
     boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
     print_center(hardware.screen, hardware.big_font, "Shutting down...", WHITE);
     SDL_Flip(hardware.screen);
@@ -339,6 +375,11 @@ void init(){
 
     hardware.background = IMG_Load("media/bg.png");
 
+    hardware.bonus_colors[BONUS_TYPE_TURBO] = PLAYER_TURBO_COLOR;
+    hardware.bonus_colors[BONUS_TYPE_FREEZE] = WHITE;
+    hardware.bonus_colors[BONUS_TYPE_BOMB] = BLACK;
+    hardware.bonus_colors[BONUS_TYPE_REPEL] = 0x00C7FBff;
+
     reset_game();
 }
 
@@ -359,35 +400,41 @@ void render_world(){
     for (i = 0; i < 50; i++){
         if (game.drops[i].state){
             switch (game.drops[i].state){
-                case DROP_ACTIVE: color = 0x019875ff; break;
-                case DROP_GROWING:
-                case DROP_DYING: color = 0xa6c780ff; break;
+                case DROP_STATE_ACTIVE: color = 0x019875ff; break;
+                case DROP_STATE_GROWING:
+                case DROP_STATE_DYING: color = 0xa6c780ff; break;
+                default: break;
             }
             if (game.player.berzerk){
                 x = game.drops[i].x + random() % 4;
                 y = game.drops[i].y + random() % 4;
-                filledCircleColor(hardware.screen, x, y, game.drops[i].size, color);
-                aacircleColor(hardware.screen, x, y, game.drops[i].size, color);
+                fill_circle(x, y, game.drops[i].size, color);
             }
             else {
-                filledCircleColor(hardware.screen, game.drops[i].x, game.drops[i].y, game.drops[i].size, color);
-                aacircleColor(hardware.screen, game.drops[i].x, game.drops[i].y, game.drops[i].size, color);
+                fill_circle(game.drops[i].x, game.drops[i].y, game.drops[i].size, color);
             }
         }
     }
 
     for (i = 0; i < 50; i++){
         if (game.enemies[i].state){
-            filledCircleColor(hardware.screen, game.enemies[i].x, game.enemies[i].y, 2, WHITE);
-            aacircleColor(hardware.screen, game.enemies[i].x, game.enemies[i].y, 2, WHITE);
+            fill_circle(game.enemies[i].x, game.enemies[i].y, 2, WHITE);
         }
     }
 
     if (game.player.berzerk)
-        filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size + game.player.berzerk_field, FORCE_FIELD_COLOR);
+        fill_circle(game.player.x, game.player.y, game.player.size + game.player.berzerk_field, FORCE_FIELD_COLOR);
     else if (game.player.force_field)
-        filledCircleColor(hardware.screen, game.player.x, game.player.y, game.player.size + game.player.force_field, FORCE_FIELD_COLOR);
+        fill_circle(game.player.x, game.player.y, game.player.size + game.player.force_field, FORCE_FIELD_COLOR);
 
+    if (game.player.bonus == BONUS_TYPE_BOMB){
+        int bomb_radius = (get_clock() - game.player.bonus_start) / 10;
+        fill_circle(game.bonus.x, game.bonus.y, game.bonus.grown_size + bomb_radius, FORCE_FIELD_COLOR);
+    }
+
+    if (game.bonus.state != BONUS_STATE_INACTIVE){
+        fill_circle(game.bonus.x, game.bonus.y, game.bonus.size, hardware.bonus_colors[game.bonus.type]);
+    }
 
     x = game.player.x;
     y = game.player.y;
@@ -408,10 +455,9 @@ void render_world(){
     else {
         color = PLAYER_COLOR;
     }
-    filledCircleColor(hardware.screen, x, y, game.player.size, color);
-    aacircleColor(hardware.screen, x, y, game.player.size, color);
+    fill_circle(x, y, game.player.size, color);
 
-    snprintf(msg, 256, "LVL %d", game.level);
+    snprintf(msg, 256, "LEVEL %d", game.level);
     TTF_SizeText(hardware.medium_font, msg, &width, &height);
     print(hardware.screen, 10, 10, hardware.medium_font, msg, WHITE);
 
@@ -422,12 +468,10 @@ void render_world(){
     if (can_berzerk()){
         x = WIDTH - 110 + random() % 3 - 1;
         y = 22 + random() % 3 - 1;
-        filledCircleColor(hardware.screen, x, y, 7, BLACK);
-        aacircleColor(hardware.screen, x, y, 7, BLACK);
+        fill_circle(x, y, 7, BLACK);
     }
     else {
-        filledCircleColor(hardware.screen, WIDTH - 110, 22, 4, PLAYER_COLOR);
-        aacircleColor(hardware.screen, WIDTH - 110, 22, 4, PLAYER_COLOR);
+        fill_circle(WIDTH - 110, 22, 4, PLAYER_COLOR);
     }
 
     snprintf(msg, 256, "%d", game.player.points);
@@ -437,24 +481,24 @@ void render_world(){
 
 void redraw(){
     switch (game.state){
-    case NO_GAME:
+    case GAME_STATE_START_SCREEN:
         render_world();
-        apply_fx(PIXELATE, NULL);
+        apply_fx(FX_PIXELATE, NULL);
         boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
         print_with_logo(hardware.screen, hardware.big_font, "Press START to play", hardware.happy_face);
         break;
-    case GAME_PAUSED:
+    case GAME_STATE_PAUSED:
         render_world();
-        apply_fx(PIXELATE, NULL);
+        apply_fx(FX_PIXELATE, NULL);
         boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
         print_with_logo(hardware.screen, hardware.big_font, "Paused", hardware.paused_face);
         break;
-    case GAME_PLAYING:
+    case GAME_STATE_PLAYING:
         render_world();
         break;
-    case GAME_OVER:
+    case GAME_STATE_OVER:
         render_world();
-        apply_fx(PIXELATE, NULL);
+        apply_fx(FX_PIXELATE, NULL);
         boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
         print_with_logo(hardware.screen, hardware.big_font, "I'M DEAD NOW, THANK YOU!", hardware.game_over_face);
         break;
@@ -470,6 +514,14 @@ void update_game(){
     int active_enemies_count = 0;
     Uint32 berzerk_duration;
 
+    // Did we reach the end of the bonus ?
+    if (game.player.bonus != BONUS_TYPE_NONE){
+        Uint32 bonus_duration = get_clock() - game.player.bonus_start;
+        if (bonus_duration > 3000){
+            game.player.bonus = BONUS_TYPE_NONE;
+        }
+    }
+
     if (can_berzerk() && hardware.joystick_state.buttons[PSP_BUTTON_TRIANGLE] && !game.player.berzerk){
         game.player.energy = 0;
         game.player.berzerk = get_clock();
@@ -477,38 +529,55 @@ void update_game(){
         return;
     }
 
-    berzerk_duration = get_clock() - game.player.berzerk;
-    game.player.berzerk_field = berzerk_duration / 4;
-    if (berzerk_duration > 1500){
-        game.player.berzerk = 0;
+    if (game.player.berzerk){
+        berzerk_duration = get_clock() - game.player.berzerk;
+        game.player.berzerk_field = berzerk_duration / 4;
+        if (berzerk_duration > 1500){
+            game.player.berzerk = 0;
+        }
     }
 
     // let the drops grow or die
     for (i = 0; i < 50; i++){
-        if (game.drops[i].state == DROP_GROWING){
+        if (game.drops[i].state == DROP_STATE_GROWING){
             game.drops[i].size++;
             if (game.drops[i].size >= game.drops[i].grown_size){
-                game.drops[i].state = DROP_ACTIVE;
+                game.drops[i].state = DROP_STATE_ACTIVE;
                 game.drops[i].size = game.drops[i].grown_size;
             }
         }
-        else if (game.drops[i].state == DROP_DYING){
+        else if (game.drops[i].state == DROP_STATE_DYING){
             game.drops[i].size--;
             if (game.drops[i].size <= 1){
-                game.drops[i].state = DROP_INACTIVE;
+                game.drops[i].state = DROP_STATE_INACTIVE;
             }
         }
     }
 
+    if (game.bonus.state == BONUS_STATE_GROWING){
+        game.bonus.size++;
+        if (game.bonus.size >= game.bonus.grown_size){
+            game.bonus.state = BONUS_STATE_ACTIVE;
+            game.bonus.size = game.bonus.grown_size;
+        }
+    }
+    else if (game.bonus.state == BONUS_STATE_DYING){
+        game.bonus.size--;
+        if (game.bonus.size <= 1){
+            game.bonus.state = BONUS_STATE_INACTIVE;
+        }
+    }
+
+
     // Add drops if maximum not reached
     for (i = 0; i < 50; i++){
-        active_drops_count += game.drops[i].state != DROP_INACTIVE;
+        active_drops_count += game.drops[i].state != DROP_STATE_INACTIVE;
     }
     if (active_drops_count < max_active_drops_count){
         drops_to_activate = max_active_drops_count - active_drops_count;
         for (i = 0; drops_to_activate && i < 50; i++){
-            if (game.drops[i].state == DROP_INACTIVE){
-                game.drops[i].state = DROP_GROWING;
+            if (game.drops[i].state == DROP_STATE_INACTIVE){
+                game.drops[i].state = DROP_STATE_GROWING;
                 game.drops[i].grown_size = 5 + (random() % (30 - game.level));
                 game.drops[i].size = 1;
                 game.drops[i].x = game.drops[i].grown_size + (random() % (WIDTH - 2 * game.drops[i].grown_size));
@@ -520,11 +589,30 @@ void update_game(){
 
     // Do we absorb a drop ?
     for (i = 0; i < 50; i++){
-        if (game.drops[i].state != DROP_INACTIVE && game.drops[i].state != DROP_DYING){
+        if (game.drops[i].state != DROP_STATE_INACTIVE && game.drops[i].state != DROP_STATE_DYING){
             if (collide(game.player.x, game.player.y, game.player.size, game.drops[i].x, game.drops[i].y, game.drops[i].size)){
                 game.player.points += game.drops[i].size;
                 game.player.energy += game.drops[i].size;
-                game.drops[i].state = DROP_DYING;
+                game.drops[i].state = DROP_STATE_DYING;
+            }
+        }
+    }
+
+    // Did we absorb the bonus ?
+    if (game.bonus.state != BONUS_STATE_INACTIVE && game.bonus.state != BONUS_STATE_DYING){
+        if (collide(game.player.x, game.player.y, game.player.size, game.bonus.x, game.bonus.y, game.bonus.size)){
+            game.player.bonus = game.bonus.type;
+            game.player.bonus_start = get_clock();
+            game.bonus.state = BONUS_STATE_DYING;
+        }
+    }
+
+    // Did the Bomb Bonus explode ?
+    if (game.player.bonus == BONUS_TYPE_BOMB){
+        int bomb_radius = (get_clock() - game.player.bonus_start) / 10;
+        for (i = 0; i < 50; i++){
+            if (game.enemies[i].state && collide(game.bonus.x, game.bonus.y, game.bonus.grown_size + bomb_radius, game.enemies[i].x, game.enemies[i].y, 2)){
+                game.enemies[i].state = ENEMY_STATE_INACTIVE;
             }
         }
     }
@@ -536,29 +624,29 @@ void update_game(){
             if (collide(game.player.x, game.player.y, game.player.size, game.enemies[i].x, game.enemies[i].y, 2)){
                 game.player.hit = get_clock();
                 game.player.life--;
-                game.enemies[i].state = ENEMY_INACTIVE;
+                game.enemies[i].state = ENEMY_STATE_INACTIVE;
                 if (game.player.life == 0){
-                    game.state = GAME_OVER;
+                    game.state = GAME_STATE_OVER;
                     stop_clock();
                     return;
                 }
             }
             // ..unless we GO BERZERK
             else if (game.player.berzerk && collide(game.player.x, game.player.y, game.player.size +  + (game.player.berzerk ? game.player.berzerk_field : 0), game.enemies[i].x, game.enemies[i].y, 2)){
-                game.enemies[i].state = ENEMY_INACTIVE;
+                game.enemies[i].state = ENEMY_STATE_INACTIVE;
             }
             // ..unless we USE THE FORCE
             else if (game.player.force_field && collide(game.player.x, game.player.y, game.player.size + game.player.force_field, game.enemies[i].x, game.enemies[i].y, 2)){
-                game.enemies[i].state = ENEMY_INACTIVE;
+                game.enemies[i].state = ENEMY_STATE_INACTIVE;
             }
         }
     }
 
     // Make the Enemies chase us
-    if (!game.player.berzerk){
+    if (!game.player.berzerk && game.player.bonus != BONUS_TYPE_FREEZE){
         for (i = 0; i < 50; i++){
             if (game.enemies[i].state){
-                int enemy_speed = random() % 2 + 1;
+                int enemy_speed = ((game.player.bonus != BONUS_TYPE_REPEL) * 2 - 1) * (random() % 2 + 1);
                 if (game.enemies[i].x > game.player.x)
                     game.enemies[i].x -= enemy_speed;
                 if (game.enemies[i].y > game.player.y)
@@ -574,12 +662,12 @@ void update_game(){
     // Add Enemies every 0.5s unless max reached
     if (!game.player.berzerk){
         for (i = 0; i < 50; i++){
-            active_enemies_count += game.enemies[i].state != ENEMY_INACTIVE;
+            active_enemies_count += game.enemies[i].state != ENEMY_STATE_INACTIVE;
         }
         if ((get_clock() - game.last_enemy_timestamp > 500) && active_enemies_count < max_active_enemies_count){
             for (i = 0; i < 50; i++){
-                if (game.enemies[i].state == ENEMY_INACTIVE){
-                    game.enemies[i].state = ENEMY_ACTIVE;
+                if (game.enemies[i].state == ENEMY_STATE_INACTIVE){
+                    game.enemies[i].state = ENEMY_STATE_ACTIVE;
                     game.enemies[i].x = random() % 2 ? 10 : WIDTH - 10;
                     game.enemies[i].y = random() % 2 ? 10 : HEIGHT - 10;
                     game.last_enemy_timestamp = get_clock();
@@ -592,9 +680,15 @@ void update_game(){
     // Use turbo ?
     game.player.speed = 2;
     game.player.turbo = 0;
-    if (hardware.joystick_state.buttons[PSP_BUTTON_CIRCLE]){
-        if (game.player.energy >= 0){
+    if (game.player.bonus == BONUS_TYPE_TURBO
+        || hardware.joystick_state.buttons[PSP_BUTTON_CIRCLE]
+        || hardware.joystick_state.buttons[PSP_BUTTON_R]){
+        if (game.player.bonus != BONUS_TYPE_TURBO && game.player.energy > 0){
             --game.player.energy;
+            game.player.speed = 4;
+            game.player.turbo = 1;
+        }
+        if (game.player.bonus == BONUS_TYPE_TURBO){
             game.player.speed = 4;
             game.player.turbo = 1;
         }
@@ -626,9 +720,17 @@ void update_game(){
     }
     game.player.force_field = keep_inside(game.player.force_field, 0, 20);
 
+
     // Next Level ?
     if (game.player.points > (game.level << 1) * 500){
         game.level = keep_inside(game.level + 1, 1, 20);
+        // Add Bonus
+        game.bonus.state = BONUS_STATE_GROWING;
+        game.bonus.type = random() % BONUS_TYPE_NUM;
+        game.bonus.grown_size = 10;
+        game.bonus.size = 1;
+        game.bonus.x = game.bonus.grown_size + (random() % (WIDTH - 2 * game.bonus.grown_size));
+        game.bonus.y = game.bonus.grown_size + (random() % (HEIGHT - 2 * game.bonus.grown_size));
     }
 }
 
@@ -659,16 +761,16 @@ void loop(){
         }
 
         switch (game.state){
-        case NO_GAME:
+        case GAME_STATE_START_SCREEN:
             if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS)){
-                game.state = GAME_PLAYING;
+                game.state = GAME_STATE_PLAYING;
                 start_clock();
                 redraw();
             }
             break;
-        case GAME_PLAYING:
+        case GAME_STATE_PLAYING:
             if (up_event && event.jbutton.button == PSP_BUTTON_START){
-                game.state = GAME_PAUSED;
+                game.state = GAME_STATE_PAUSED;
                 stop_clock();
             }
             else {
@@ -676,14 +778,14 @@ void loop(){
             }
             redraw();
             break;
-        case GAME_PAUSED:
+        case GAME_STATE_PAUSED:
             if (up_event && (event.jbutton.button == PSP_BUTTON_START || event.jbutton.button == PSP_BUTTON_CROSS)){
-                game.state = GAME_PLAYING;
+                game.state = GAME_STATE_PLAYING;
                 start_clock();
                 redraw();
             }
             break;
-        case GAME_OVER:
+        case GAME_STATE_OVER:
             if (up_event && (event.jbutton.button == PSP_BUTTON_START)){
                 reset_game();
                 redraw();
