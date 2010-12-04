@@ -592,9 +592,9 @@ void update_game(){
     // Use turbo ?
     game.player.speed = 2;
     game.player.turbo = 0;
-    if (game.player.berzerk || hardware.joystick_state.buttons[PSP_BUTTON_CIRCLE]){
-        if (game.player.berzerk || game.player.energy >= 0){
-            game.player.berzerk || --game.player.energy;
+    if (hardware.joystick_state.buttons[PSP_BUTTON_CIRCLE]){
+        if (game.player.energy >= 0){
+            --game.player.energy;
             game.player.speed = 4;
             game.player.turbo = 1;
         }
