@@ -480,6 +480,7 @@ void render_world(){
 }
 
 void redraw(){
+    char msg[256];
     switch (game.state){
     case GAME_STATE_START_SCREEN:
         render_world();
@@ -500,7 +501,8 @@ void redraw(){
         render_world();
         apply_fx(FX_PIXELATE, NULL);
         boxColor(hardware.screen, 0, 0, WIDTH, HEIGHT, TINT_COLOR);
-        print_with_logo(hardware.screen, hardware.big_font, "I'M DEAD NOW, THANK YOU!", hardware.game_over_face);
+        snprintf(msg, 256, "You scored %d points, and I'M DEAD!", game.player.points);
+        print_with_logo(hardware.screen, hardware.big_font, msg, hardware.game_over_face);
         break;
     }
     SDL_Flip(hardware.screen);
