@@ -433,7 +433,9 @@ void render_world(){
     }
 
     if (game.bonus.state != BONUS_STATE_INACTIVE){
-        fill_circle(game.bonus.x, game.bonus.y, game.bonus.size, hardware.bonus_colors[game.bonus.type]);
+        x = game.bonus.x + random() % 4;
+        y = game.bonus.y + random() % 4;
+        fill_circle(x, y, game.bonus.size, hardware.bonus_colors[game.bonus.type]);
     }
 
     x = game.player.x;
