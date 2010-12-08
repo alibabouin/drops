@@ -5,6 +5,10 @@ Fast paced tiny Game for Linux/PSP
 INSTALLATION
 
 You need libsdl-dev on Linux and the pspsdk for PSP (I suggest 'Minimalist PSPSDK' http://minpspw.sourceforge.net/index.html)
+On Linux, you may have to edit the source to make it work for your gamepad (near line 66 of 'drops.c').
+
+    > git clone https://github.com/alibabouin/drops.git
+    > cd drops
 
     > # Linux
     > make
@@ -15,4 +19,18 @@ You need libsdl-dev on Linux and the pspsdk for PSP (I suggest 'Minimalist PSPSD
     > mkdir /path/to/psp/game/drops
     > cp -r media EBOOT.PBP /path/to/psp/game/drops
 
-Note: currently playable only on PSP or via joypad/joystick on Linux
+GAMEPLAY
+
+You are the pinkish circle.
+You must not let the little white circles reach you, they want to kill you.
+You can collect energy by touching the green circles.
+Energy can be used to speed up or create a force field that will destroy any white circle.
+Every 500 points, you can go 'berzerk' and kill all enemies on the screen but you will be
+whithout energy left.
+The game contains 20 levels. When reaching a new level, a bonus will appear on the screen as a
+shaking circle.
+ - 'SPEED' makes you speed for 3 seconds
+ - 'REPEL' repels enemies for 3 seconds
+ - 'FREEZE' will freeze enemies for 3 seconds
+ - 'BOMB' will detonate a bomb
+Enjoy.
