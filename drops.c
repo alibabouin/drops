@@ -305,7 +305,7 @@ void fill_circle(int x, int y, int r, Uint32 rgba){
 }
 
 int can_berzerk(){
-    return game.player.energy > 300;
+    return game.player.energy > 500;
 }
 
 void reset_game(){
