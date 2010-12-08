@@ -189,7 +189,6 @@ Hardware hardware;
 
 void render_world();
 
-
 int collide(int x1, int y1, int size1, int x2, int y2, int size2){
     int sqd = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
     return sqd < (size1 + size2) * (size1 + size2);
@@ -396,7 +395,12 @@ void render_world(){
     int width, height, i, x, y;
     Uint32 color = 0;
 
+#ifdef _PSP_FW_VERSION
+    SDL_FillRect(hardware.screen, NULL, SDL_MapRGB(hardware.screen->format, R(BG_COLOR), G(BG_COLOR), B(BG_COLOR)));
+#else
     SDL_BlitSurface(hardware.background, NULL, hardware.screen, NULL);
+#endif
+
     for (i = 0; i < 50; i++){
         if (game.drops[i].state){
             switch (game.drops[i].state){
